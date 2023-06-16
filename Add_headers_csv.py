@@ -3,6 +3,9 @@ import sys, threading
 sys.setrecursionlimit(10**7) # max depth of recursion
 threading.stack_size(2**27)  # new thread will get stack of such size
 
+#Code takes the fas_to_csv.py output and adds a "Group" Column, add headers for the 'Seq_ID', 'Seq' as well as it enumerates all possitons of the sequence.
+#The output is in csv format and is ready to be used with the stdev_cal.py code.
+
 dir = r'U:\ResearchData\rdss_hhaim\LAB PROJECTS\John\Galaxy Analysis\6.6.23 Troubleshooting\\'
 filename_input = 'test.csv'  # Replace with your actual CSV file name
 filename_output = 'test_mod_4.csv'
@@ -25,7 +28,6 @@ def add_headers_to_csv(input_filename, output_filename):
         writer = csv.writer(file)
         writer.writerows(data)
 
-# Usage example
 input_filename = dir + filename_input
 output_filename = dir + filename_output
 add_headers_to_csv(input_filename, output_filename)
