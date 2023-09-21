@@ -1,0 +1,61 @@
+from Bio import Phylo
+import numpy as np
+
+#Script calculates the pairwise genetic distance of all terminal nodes from a tree.
+
+#To run: indicate Directory, input name, and desired output name bellow then run the script.
+
+file_dir = r'C:\Users\rojaschavez\Desktop\\'
+file_name = 'tree.nwk'
+file_out = 'matrix_2.csv'
+
+def read_tree_from_file(tree_file):
+    print(f"Reading tree from file: {tree_file}")
+    # Read the Newick tree from a file
+    tree = Phylo.read(tree_file, "newick")
+    return tree
+
+def calculate_distance_matrix(tree):
+    print("Calculating distance matrix...")
+    # Get the sequence IDs
+    seq_ids = [seq.name for seq in tree.get_terminals()]
+
+    # Initialize an empty distance matrix with sequence IDs as headers
+    num_seqs = len(seq_ids)
+    dist_matrix = np.zeros((num_seqs + 1, num_seqs + 1), dtype=object)
+
+    # Set the row and column headers
+    dist_matrix[1:, 0] = seq_ids
+    dist_matrix[0, 1:] = seq_ids
+
+    # Calculate the pairwise distances
+    for i, seq1 in enumerate(tree.get_terminals()):
+        for j, seq2 in enumerate(tree.get_terminals()):
+            if i < j:
+                dist = tree.distance(seq1, seq2)
+                dist_matrix[i + 1][j + 1] = dist
+                dist_matrix[j + 1][i + 1] = dist
+
+    print("Distance matrix calculation completed.")
+    return dist_matrix
+
+def save_distance_matrix_to_csv(dist_matrix, output_file):
+    print(f"Saving distance matrix to CSV file: {output_file}")
+    # Save the distance matrix to a CSV file with headers
+    np.savetxt(output_file, dist_matrix, delimiter=',', fmt='%s')
+
+    print(f"Distance matrix saved to {output_file}")
+
+def main():
+    tree_file = file_dir + file_name
+    output_file = file_dir + file_out
+
+    tree = read_tree_from_file(tree_file)
+    dist_matrix = calculate_distance_matrix(tree)
+
+    # Save the distance matrix to a CSV file with headers
+    save_distance_matrix_to_csv(dist_matrix, output_file)
+
+
+if __name__ == "__main__":
+    main()
