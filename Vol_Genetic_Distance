@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import csv
+import sys
+import math
+from re import compile
+from multiprocessing import Pool
+
+# ==========================================================================================
+working_dir = r"U:\ResearchData\rdss_hhaim\LAB PROJECTS\Vol Fore MS\7.20.23 HIV VF MS DATA & ANALYSES\Volatility Calculations\\"
+png_seq_folder_name = "Separated_C/"  # slash at the end
+hydropathy = "FD(Population_C).csv"
+hydropathy_file = working_dir + hydropathy
+div_genetic_dis = True  # True: divides Phenotypic Distance by Genetic distance; False: divides Phenotypic Distance by 1
+genetic_dis_file_name = "GD_C.csv"
+hydro = True  # True: use hydrophy value to calculate  False: Input sequences are already numbers instead of AA
+average = False  # True: calculate the average instead of volatility (just the avg of current position column's value, each cell must be number instead of AA)
+output_file_name = "Volatility_C.csv"
+# average has its own build-in output name, no need to change this variable for average output
+
+# tuples: attribute name and column number. !!! Col count starts from 0, NOT 1 !!!
+# png_clade = ("Clade", 0)
+png_country = ("Country", 0)
+png_year = ("Year", 1)
+png_name = ("Patient", 2)
+png_days = ("Days", 3)  # IN single sample sequences, there's no Days
+png_acc = ("Accession", 5)
+png_seq_start = 6  # start column number of sequences which is position 1
+
+position_range = (1, 856)
+# customize the output attributes
+output_attributes = (png_country, png_year, png_name, png_days)
+# note: #ofEnv for each group will always be added to the output
+
+png_seq_folder = working_dir + png_seq_folder_name
+name_list_file = working_dir + png_seq_folder_name + "allPatientNames.txt"
+gd_file = working_dir + genetic_dis_file_name
+output_file = working_dir + output_file_name
+print_total_sample_num = 0  # store the total sample number in the folder check function
+check_folder = False  # check folder function will change this to True
+
+png_seq_header_row = []  # after checking the png file folder, save a header row here for final output use
+name_list = []  # read name list file and store the name list here
+gd_list = []  # read the gd file and store here
+all_groups_out_list = []  # for final outputs
+
+ACCESSION_MATCHER = compile(r'[A-Za-z]{2}\d{6}|[A-Za-z]{1}\d{5}|[A-Za-z]{3}\d{5}')
+HYDROPATHY_SCORE_TABLE = {}
+# Read the hydropathy values from the CSV file and store them in the HYDROPATHY_SCORE_TABLE dictionary
+def read_hydropathy_table(hydropathy_file):
+    with open(hydropathy_file, newline='') as csvfile:
+        csvreader = csv.reader(csvfile)
+        header = next(csvreader)  # Skip the header row
+        positions = list(map(int, header[1:]))  # Extract the position numbers
+
+        for row in csvreader:
+            residue = row[0]
+            scores = list(map(float, row[1:]))
+
+            if residue not in HYDROPATHY_SCORE_TABLE:
+                HYDROPATHY_SCORE_TABLE[residue] = {}
+
+            for i, score in enumerate(scores):
+                HYDROPATHY_SCORE_TABLE[residue][positions[i]] = score
+
+read_hydropathy_table(hydropathy_file)
+
+def read_txt(x, y):  # read a txt file x and store into a list y
+    file = open(x, "r")
+    for line in file:
+        y.append(line.strip())  # Use strip() to remove trailing newline characters
+
+def read_csv(filedir):
+    result = []
+    with open(filedir, newline='') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            result.append(row)
+    return result
+
+def write_csv(x, y):  # write list x into file y
+    with open(y, 'w+', newline='') as file:
+        wr = csv.writer(file, dialect='excel')
+        wr.writerows(x)
+
+# Extract accession from the given string, returns the first match if there are multiple matches
+def getAccessNum(string):
+    return ACCESSION_MATCHER.findall(string)[0]
+
+def check_png_seq_folder(n):  # n is the name list. Use name list to search for files
+    global png_seq_header_row
+    global print_total_sample_num
+    global check_folder
+    for i in n:
+        try:
+            read_csv(f"{png_seq_folder}{i}.csv")
+        except:
+            raise ValueError(f"Input file Error: Couldn't find file {i}.csv")
+    check_folder = True  # everything is correct, give it True
+    local_temp_png_list = read_csv(f"{png_seq_folder}{n[0]}.csv")  # read one seq file in the folder
+    png_seq_header_row = local_temp_png_list[0]  # add the header row for final output use
+
+# Genetic distance look up function: l is the list, x,y is a pair of accession number. Return a float value.
+def gd_look_up(l, x, y):
+    gd = 0
+    coord_1 = l[0].index(x)
+    coord_2 = l[0].index(y)
+    if l[coord_1][coord_2] == '':  # this gd matrix only contains left half triangle, so value might be ''
+        gd = l[coord_2][coord_1]
+    else:
+        gd = l[coord_1][coord_2]
+
+    return float(gd)
+
+# Calculate Phenotypic Distance within one group. png is png seq list;
+def one_group_volatility(png):
+    # (Rest of the code remains the same)
+    return one_group_out_list
+
+def find_all_comb(l):  # find all combinations from a list
+    result = []
+    for i in range(len(l)):
+        for j in range(i + 1, len(l)):
+            result.append([l[i], l[j]])
+    return result
+
+def cal_each_group_volatility():
+    global output_attributes
+    global all_groups_out_list
+
+    header_row = ["#ofEnv"] + [png_seq_header_row[i[1]] for i in output_attributes]
+    all_groups_out_list.append(header_row + png_seq_header_row[png_seq_start:])
+
+    for group_name in name_list:
+        current_group_png = read_csv(f"{png_seq_folder}{group_name}.csv")
+        print(f"{group_name}: ")
+        group_volatility = one_group_volatility(current_group_png)
+        all_groups_out_list.append(group_volatility)
+
+    write_csv(all_groups_out_list, output_file)
+
+def main():
+    global name_list
+    global gd_list
+
+    read_txt(name_list_file, name_list)  # read the name list file and save to a list
+    check_png_seq_folder(name_list)  # check the seq file folder
+    gd_list = read_csv(gd_file)  # read the gd file to a list
+
+    cal_each_group_volatility()
+
+    if check_folder:
+        print(f"\n{len(name_list)} PNGS sequence files found in the folder")
+        print(f"with a total sample number: {print_total_sample_num}\n")
+
+    print(f"{len(gd_list[0]) - 1} samples found in the genetic distance file")
+
+if __name__ == '__main__':
+    main()
