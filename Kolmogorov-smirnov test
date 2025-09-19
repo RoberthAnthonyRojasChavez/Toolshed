@@ -1,0 +1,58 @@
+import pandas as pd
+from scipy.stats import ks_2samp
+import numpy as np
+
+file_dir = r'C:\Users\rojaschavezr\Desktop\test_code\\'
+file_ID = 'test.xlsx'
+file_path = file_dir + file_ID
+
+def read_excel(file_path):
+    # Read the Excel file into a DataFrame
+    df = pd.read_excel(file_path)
+    return df
+
+
+def calculate_ks_test(curve_1, curve_2):
+    """
+    Performs the Kolmogorov-Smirnov test between two curves.
+    Returns the KS statistic and p-value.
+    """
+    ks_statistic, p_value = ks_2samp(curve_1, curve_2)
+    return ks_statistic, p_value
+
+
+def compare_curves(file_path):
+    # Read data from the Excel file
+    df = read_excel(file_path)
+
+    # Assuming the data has columns 'time' and 'curve1', 'curve2', 'curve3'
+    # Make sure to adjust the column names based on your actual data
+    time_points = df['time'].unique()
+
+    # Extract the three curves' data
+    curve_1 = df['curve1'].values
+    curve_2 = df['curve2'].values
+    curve_3 = df['curve3'].values
+
+    # Compare the curves pairwise
+    results = {}
+
+    # Compare curve 1 vs curve 2
+    ks_stat_1_2, p_val_1_2 = calculate_ks_test(curve_1, curve_2)
+    results['curve1_vs_curve2'] = (ks_stat_1_2, p_val_1_2)
+
+    # Compare curve 1 vs curve 3
+    ks_stat_1_3, p_val_1_3 = calculate_ks_test(curve_1, curve_3)
+    results['curve1_vs_curve3'] = (ks_stat_1_3, p_val_1_3)
+
+    # Compare curve 2 vs curve 3
+    ks_stat_2_3, p_val_2_3 = calculate_ks_test(curve_2, curve_3)
+    results['curve2_vs_curve3'] = (ks_stat_2_3, p_val_2_3)
+
+    return results
+
+ks_results = compare_curves(file_path)
+
+# Print the results
+for comparison, (ks_stat, p_val) in ks_results.items():
+    print(f"{comparison}: KS Statistic = {ks_stat:.15f}, p-value = {p_val:.15f}")
